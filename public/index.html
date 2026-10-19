@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+  <title>Herdr Mobile Controller</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "JetBrains Mono", monospace; }
+    .terminal-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+    .terminal-scroll::-webkit-scrollbar-track { background: #090d16; }
+    .terminal-scroll::-webkit-scrollbar-thumb { background: #21262d; border-radius: 2px; }
+    .cursor-blink { animation: blink 1s step-end infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  </style>
+</head>
+<body class="bg-[#050811] text-[#c9d1d9] h-[100dvh] w-screen flex flex-col overflow-hidden select-none">
+
+  <!-- TOP APP BAR -->
+  <header class="h-11 border-b border-[#21262d] bg-[#0d1117] flex items-center justify-between px-3 shrink-0 z-30">
+    <div class="flex items-center space-x-2 overflow-hidden">
+      <!-- Mobile Sidebar Toggle Button -->
+      <button onclick="toggleSidebar()" class="p-1 px-2 rounded bg-[#161b22] hover:bg-[#21262d] text-emerald-400 border border-[#30363d] flex items-center space-x-1 shrink-0">
+        <span class="text-xs">☰</span>
+        <span class="text-[11px] font-mono font-bold">DỰ ÁN</span>
+      </button>
+
+      <div class="flex items-center space-x-1.5 truncate">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+        <span id="activeWorkspaceLabel" class="font-bold text-xs text-white font-mono truncate">3D STUDIO FORGE</span>
+      </div>
+    </div>
+
+    <!-- Quick Reload Button -->
+    <button onclick="loadAll()" class="p-1 px-2 rounded bg-gray-800 text-gray-300 text-xs font-mono">
+      🔄
+    </button>
+  </header>
+
+  <!-- PANE TABS BAR (DEDICATED WINDOW SWITCHER) -->
+  <div class="bg-[#090d16] border-b border-[#21262d] px-2 py-1.5 flex items-center justify-between shrink-0 z-20">
+    <div class="flex items-center space-x-1.5 overflow-x-auto terminal-scroll py-0.5 flex-1 pr-2" id="paneTabsContainer">
+      <!-- Injected by JS: e.g. [Cửa sổ 1: w2:p1] [Cửa sổ 2: w2:p2] -->
+    </div>
+    
+    <!-- Big Add New Window Button -->
+    <button onclick="createNewWindow()" class="px-2.5 py-1 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/40 rounded text-xs font-mono font-bold shrink-0 flex items-center space-x-1 transition active:scale-95">
+      <span>➕</span>
+      <span>Thêm Cửa Sổ</span>
+    </button>
+  </div>
+
+  <!-- BODY CONTENT -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- BACKDROP (Mobile only) -->
+    <div id="sidebarBackdrop" onclick="closeSidebar()" class="fixed inset-0 bg-black/70 z-40 hidden transition-opacity"></div>
+
+    <!-- SIDEBAR DRAWER (Project Selector) -->
+    <aside id="sidebarDrawer" class="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-[#0d1117] border-r border-[#21262d] flex flex-col justify-between transition-transform duration-300 ease-in-out -translate-x-full shrink-0 shadow-2xl">
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="p-3 border-b border-[#21262d] flex items-center justify-between bg-[#161b22]/70">
+          <div class="flex items-center space-x-2">
+            <span class="font-bold text-xs tracking-wider text-white uppercase font-mono">CHỌN DỰ ÁN</span>
+            <span id="projectCount" class="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-1.5 py-0.2 rounded font-mono">0</span>
+          </div>
+          <button onclick="closeSidebar()" class="p-1 px-2 rounded text-gray-400 hover:text-white bg-gray-800 text-xs font-bold">
+            ✕ ĐÓNG
+          </button>
+        </div>
+
+        <div class="p-2 border-b border-[#21262d]">
+          <input id="searchProjectInput" oninput="filterProjects()" type="text" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white placeholder-gray-500 font-mono focus:outline-none focus:border-emerald-500" placeholder="🔍 Tìm tên dự án...">
+        </div>
+
+        <div id="projectsList" class="flex-1 overflow-y-auto p-2 space-y-1 terminal-scroll font-mono text-xs">
+          <div class="text-gray-500 italic p-2 text-[11px]">Đang tải danh sách...</div>
+        </div>
+      </div>
+
+      <div class="border-t border-[#21262d] p-2.5 bg-[#0d1117]/95">
+        <div class="text-[10px] uppercase font-bold text-gray-400 mb-1.5 font-mono flex items-center justify-between">
+          <span>AGENTS TRÊN MÁY</span>
+          <span class="text-emerald-400 text-[10px]">● LIVE</span>
+        </div>
+        <div id="sidebarAgentsList" class="flex flex-wrap gap-1 font-mono text-[10px]">
+          <span class="px-2 py-0.5 rounded bg-[#161b22] border border-[#30363d] text-emerald-400 flex items-center space-x-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span>cursor</span>
+          </span>
+          <span class="px-2 py-0.5 rounded bg-[#161b22] border border-[#30363d] text-emerald-400 flex items-center space-x-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span>opencode</span>
+          </span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN TERMINAL AREA (Tap anywhere to focus keyboard!) -->
+    <main class="flex-1 flex flex-col overflow-hidden bg-[#050811] w-full" onclick="focusInput()">
+
+      <!-- Panes Grid / Fullscreen on mobile -->
+      <div id="panesContainer" class="flex-1 p-1.5 grid grid-cols-1 md:grid-cols-2 gap-1.5 overflow-hidden">
+        <!-- Injected by JS -->
+      </div>
+
+      <!-- BOTTOM COMMAND BAR -->
+      <div class="p-2 border-t border-[#21262d] bg-[#0d1117] flex flex-col space-y-1.5 shrink-0 z-20 shadow-lg" onclick="event.stopPropagation()">
+        
+        <!-- Quick Touch Buttons for Finger Tapping -->
+        <div class="flex items-center space-x-1.5 overflow-x-auto terminal-scroll py-0.5 text-[11px] font-mono text-gray-400 shrink-0">
+          <span class="text-gray-500 text-[10px] uppercase shrink-0 font-bold">Lệnh:</span>
+          <button onclick="sendQuick('dir')" class="px-2.5 py-1 rounded bg-[#161b22] hover:bg-[#21262d] active:bg-blue-600 active:text-white text-blue-400 border border-[#30363d] shrink-0 font-bold">📁 dir</button>
+          <button onclick="sendQuick('git status')" class="px-2.5 py-1 rounded bg-[#161b22] hover:bg-[#21262d] active:bg-amber-600 active:text-white text-amber-400 border border-[#30363d] shrink-0 font-bold">🌿 git</button>
+          <button onclick="sendQuick('&quot;H:\\AI Project\\herdr-prebuilt\\herdr.exe&quot; agent list')" class="px-2.5 py-1 rounded bg-[#161b22] hover:bg-[#21262d] active:bg-emerald-600 active:text-white text-emerald-400 border border-[#30363d] shrink-0 font-bold">🤖 agents</button>
+          <button onclick="createNewWindow()" class="px-2.5 py-1 rounded bg-[#161b22] hover:bg-[#21262d] text-purple-400 border border-[#30363d] shrink-0 font-bold">➕ mở thêm cmd</button>
+        </div>
+
+        <!-- Terminal Input Row (Touch to type) -->
+        <div class="flex items-center space-x-1.5 bg-[#161b22] border-2 border-emerald-500/80 rounded-lg p-1 shadow-inner focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-400/30">
+          <div class="flex items-center space-x-1 px-1.5 py-1 bg-black/40 rounded text-xs font-mono text-emerald-400 shrink-0 font-bold">
+            <span id="targetPaneLabel">w2:p1</span>
+            <span class="text-emerald-400 font-bold cursor-blink">&gt;</span>
+          </div>
+          <input id="mainCmdInput" 
+                 type="text" 
+                 inputmode="text" 
+                 enterkeyhint="send"
+                 autocomplete="off"
+                 autocorrect="off"
+                 autocapitalize="off"
+                 spellcheck="false"
+                 class="flex-1 bg-transparent px-2 py-1.5 text-xs font-mono text-white placeholder-gray-500 focus:outline-none" 
+                 placeholder="Chạm vào đây để gõ lệnh vào cửa sổ này...">
+          <button onclick="sendActivePaneCommand()" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-mono font-bold text-xs px-3.5 py-1.5 rounded transition shrink-0 shadow">
+            Gửi
+          </button>
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

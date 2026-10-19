@@ -1,0 +1,6 @@
+node_modules/
+*.log
+*.tmp
+.DS_Store
+take_screenshot*.cjs
+*.png

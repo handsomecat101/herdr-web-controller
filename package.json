@@ -1,0 +1,7 @@
+{
+  "name": "herdr-web-controller",
+  "version": "1.0.0",
+  "description": "Visual Web Controller for Herdr Multi-Agent Orchestrator",
+  "type": "commonjs",
+  "main": "server.js"
+}
